@@ -63,6 +63,12 @@ sections when a resource is not available, or conversely if you are comfortable
 blocking longer on a particular resource. This is not implemented in the below
 `ConnectionPool::Wrapper` class.
 
+Note that you can also explicitly check-in/check-out connections using the `#checkin`
+and `#checkout` methods; however, there are no safety nets here! Once you check out a connection,
+nobody else may use it until you check it back in, and if you leak it, it's gone for good;
+we don't do anything clever like override the finalizer so that we can detect when
+the connection goes out of scope and return it to the pool. Caveat emptor!
+
 ## Migrating to a Connection Pool
 
 You can use `ConnectionPool::Wrapper` to wrap a single global connection,
