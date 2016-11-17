@@ -86,6 +86,10 @@ $redis.with do |conn|
 end
 ```
 
+And, of course, if there's any kind of load balancing or distribution on
+the other end of the connection, there is no guarantee that two subsequent calls
+to a `Wrapper`-wrapped object will go to the same database.
+
 Once you've ported your entire system to use `with`, you can simply remove
 `Wrapper` and use the simpler and faster `ConnectionPool`.
 
