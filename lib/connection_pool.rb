@@ -39,15 +39,15 @@ require_relative 'connection_pool/connection_manager'
 # - :size - number of connections to pool, defaults to 5
 # - :timeout - amount of time to wait for a connection if none currently available, defaults to 5 seconds
 # - :max_age - maximum number of seconds that a connection may be alive for (will recycle on checkin/checkout)
-# - :connect - callable for creating a connection
-# - :disconnect - callable for shutting down a connection
+# - :connect_with - callable for creating a connection
+# - :disconnect-_with - callable for shutting down a connection
 #
 class ConnectionPool
   DEFAULTS = {size: 5, timeout: 1, max_age: Float::INFINITY}
 
   def self.wrap(options, &block)
     if block_given?
-      options[:connect] = block
+      options[:connect_with] = block
     end
     Wrapper.new(options)
   end
@@ -64,14 +64,14 @@ class ConnectionPool
     end
 
     if block_given?
-      if options.include?(:connect)
-        raise ArgumentError.new("Block passed to ConnectionPool *and* :connect in options")
+      if options.include?(:connect_with)
+        raise ArgumentError.new("Block passed to ConnectionPool *and* :connect_with in options")
       else
-        options[:connect] = block
+        options[:connect_with] = block
       end
     end
 
-    @manager = ConnectionPool::ConnectionManager.new(options[:connect], options[:disconnect])
+    @manager = ConnectionPool::ConnectionManager.new(options[:connect_with], options[:disconnect_with])
 
     @available = TimedStack.new(@manager, @size)
     @key = :"current-#{@available.object_id}"

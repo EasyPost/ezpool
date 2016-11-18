@@ -108,7 +108,7 @@ class TestConnectionPool < Minitest::Test
     pool = ConnectionPool.new(
       timeout: 0,
       size: 1,
-      connect: lambda { Object.new }
+      connect_with: lambda { Object.new }
     )
 
     pool.with do
@@ -124,7 +124,7 @@ class TestConnectionPool < Minitest::Test
     pool = ConnectionPool.new(
       timeout: 0,
       size: 1,
-      connect: lambda { Object.new }
+      connect_with: lambda { Object.new }
     )
 
     assert_raises Timeout::Error do
@@ -144,7 +144,7 @@ class TestConnectionPool < Minitest::Test
     pool = ConnectionPool.new(
       timeout: 0,
       size: 1,
-      connect: lambda { Object.new }
+      connect_with: lambda { Object.new }
     )
 
     def pool.checkout(options)
@@ -371,8 +371,8 @@ class TestConnectionPool < Minitest::Test
     recorders = []
     pool = ConnectionPool.new(
       size: 3,
-      connect: lambda { Recorder.new.tap { |r| recorders << r } },
-      disconnect: lambda { |recorder| recorder.do_work("shutdown")}
+      connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
+      disconnect_with: lambda { |recorder| recorder.do_work("shutdown")}
     )
 
     threads = use_pool pool, 3
@@ -399,8 +399,8 @@ class TestConnectionPool < Minitest::Test
 
     pool = ConnectionPool.new(
       size: 3,
-      connect: lambda { Recorder.new.tap { |r| recorders << r } },
-      disconnect: lambda { |recorder| recorder.do_work("shutdown") }
+      connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
+      disconnect_with: lambda { |recorder| recorder.do_work("shutdown") }
     )
 
     threads = use_pool pool, 2
@@ -423,8 +423,8 @@ class TestConnectionPool < Minitest::Test
 
     pool = ConnectionPool.new(
       size: 3, max_age: 0.1,
-      connect: lambda { Recorder.new.tap { |r| recorders << r } },
-      disconnect: lambda { |conn| conn.do_work("shutdown") }
+      connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
+      disconnect_with: lambda { |conn| conn.do_work("shutdown") }
     )
 
     pool.with do |conn|
@@ -438,10 +438,10 @@ class TestConnectionPool < Minitest::Test
     assert_equal [["shutdown"], ["shutdown"]], recorders.map { |r| r.calls }
   end
 
-  def test_connect_proc
+  def test_connect_with
     conn_cls = Struct.new("Conn")
 
-    pool = ConnectionPool.new(size: 1, connect: proc { conn_cls.new })
+    pool = ConnectionPool.new(size: 1, connect_with: proc { conn_cls.new })
     
     pool.with do |conn|
       assert_instance_of(conn_cls, conn)
@@ -453,8 +453,8 @@ class TestConnectionPool < Minitest::Test
 
     wrapper = ConnectionPool::Wrapper.new(
       size: 3,
-      connect: lambda { Recorder.new.tap { |r| recorders << r } },
-      disconnect: lambda { |recorder| recorder.do_work("shutdown") }
+      connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
+      disconnect_with: lambda { |recorder| recorder.do_work("shutdown") }
     )
 
     threads = use_pool wrapper, 3
