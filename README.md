@@ -2,7 +2,8 @@ connection\_pool
 =================
 [![Build Status](https://travis-ci.org/mperham/connection_pool.svg)](https://travis-ci.org/mperham/connection_pool)
 
-Generic connection pooling for Ruby.
+Generic connection pooling for Ruby. Originally forked from
+[connection_pool](https://github.com/mperham/connection_pool), but with moderately different semantics.
 
 MongoDB has its own connection pool.  ActiveRecord has its own connection pool.
 This is a generic connection pool that can be used with anything, e.g. Redis,
@@ -15,8 +16,25 @@ Usage
 Create a pool of objects to share amongst the fibers or threads in your Ruby
 application:
 
-``` ruby
+```ruby
+$memcached = ConnectionPool.new(
+  size: 5,
+  timeout: 5,
+  connect: proc { Dalli::Client.new }
+)
+```
+
+You can also pass your connection function as a block:
+
+```ruby
 $memcached = ConnectionPool.new(size: 5, timeout: 5) { Dalli::Client.new }
+```
+
+Or you can configure it later:
+
+```ruby
+$memcached = ConnectionPool.new(size: 5, timeout: 5)
+$memcached.connect_with { Dalli::Client.new }
 ```
 
 Then use the pool in your application:
@@ -45,6 +63,12 @@ sections when a resource is not available, or conversely if you are comfortable
 blocking longer on a particular resource. This is not implemented in the below
 `ConnectionPool::Wrapper` class.
 
+Note that you can also explicitly check-in/check-out connections using the `#checkin`
+and `#checkout` methods; however, there are no safety nets here! Once you check out a connection,
+nobody else may use it until you check it back in, and if you leak it, it's gone for good;
+we don't do anything clever like override the finalizer so that we can detect when
+the connection goes out of scope and return it to the pool. Caveat emptor!
+
 ## Migrating to a Connection Pool
 
 You can use `ConnectionPool::Wrapper` to wrap a single global connection,
@@ -68,8 +92,30 @@ $redis.with do |conn|
 end
 ```
 
+And, of course, if there's any kind of load balancing or distribution on
+the other end of the connection, there is no guarantee that two subsequent calls
+to a `Wrapper`-wrapped object will go to the same database.
+
 Once you've ported your entire system to use `with`, you can simply remove
 `Wrapper` and use the simpler and faster `ConnectionPool`.
+
+## Thread-safety / Connection Multiplexing
+
+`ConnectionPool`s are thread-safe and re-entrant in that the pool itself can be shared between different
+threads and it is guaranteed that the same connection will never be returned from overlapping calls
+to `#checkout` / `#with`. Note that this is achieved through the judicious use of mutexes; this code
+is not appropriate for systems with hard real-time requiremnts. Then again, neither is Ruby.
+
+The original `connection_pool` library had special functionality so that if you checked out
+a connection from a thread which already had a checked out connection, you would be guaranteed
+to get the same connection back again. This logic prevents a number of valable use cases,
+so no longer exists. Each overlapping call to `pool.checkout` / `pool.with` will get a different
+connection.
+
+In particular, this feature could be abused to assume that adjacent calls to `Wrap`ed connections
+from the same thread would go to the same database connection and perhaps the same session/transaction.
+Don't do that. If you care about transactions or database sessions, you need to be explicitly checking
+out and passing around connections.
 
 
 ## Shutdown
@@ -79,13 +125,23 @@ Further checkout attempts will immediately raise an error but existing checkouts
 will work.
 
 ```ruby
-cp = ConnectionPool.new { Redis.new }
-cp.shutdown { |conn| conn.quit }
+cp = ConnectionPool.new(
+    connect: lambda { Redis.new },
+    disconnect: lambda { |conn| conn.quit }
+)
+cp.shutdown
 ```
 
 Shutting down a connection pool will block until all connections are checked in and closed.
 **Note that shutting down is completely optional**; Ruby's garbage collector will reclaim
 unreferenced pools under normal circumstances.
+
+## Connection recycling
+
+If you specify the `max_age` parameter to a connection pool, it will attempt to gracefully recycle
+connections once they reach a certain age. This can be beneficial for, e.g., load balancers where you
+want client applications to eventually pick up new databases coming into service without having to
+explicitly restart the client processes.
 
 
 Notes
@@ -104,4 +160,6 @@ Notes
 Author
 ------
 
-Mike Perham, [@mperham](https://twitter.com/mperham), <http://mikeperham.com>
+Originally by Mike Perham, [@mperham](https://twitter.com/mperham), <http://mikeperham.com>
+
+Forked and modified by engineers at [EasyPost](https://www.easypost.com).
