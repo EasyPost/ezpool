@@ -5,7 +5,7 @@
 
 require 'thread'
 
-class ConnectionPool
+class EzPool
 
   class_definition = Class.new do
 

@@ -1,7 +1,7 @@
-require_relative 'connection_pool/version'
-require_relative 'connection_pool/timed_stack'
-require_relative 'connection_pool/errors'
-require_relative 'connection_pool/connection_manager'
+require_relative 'ezpool/version'
+require_relative 'ezpool/timed_stack'
+require_relative 'ezpool/errors'
+require_relative 'ezpool/connection_manager'
 
 
 # Generic connection pool class for e.g. sharing a limited number of network connections
@@ -9,7 +9,7 @@ require_relative 'connection_pool/connection_manager'
 #
 # Example usage with block (faster):
 #
-#    @pool = ConnectionPool.new { Redis.new }
+#    @pool = EzPool.new { Redis.new }
 #
 #    @pool.with do |redis|
 #      redis.lpop('my-list') if redis.llen('my-list') > 0
@@ -23,7 +23,7 @@ require_relative 'connection_pool/connection_manager'
 #
 # Example usage replacing an existing connection (slower):
 #
-#    $redis = ConnectionPool.wrap { Redis.new }
+#    $redis = EzPool.wrap { Redis.new }
 #
 #    def do_work
 #      $redis.lpop('my-list') if $redis.llen('my-list') > 0
@@ -42,7 +42,7 @@ require_relative 'connection_pool/connection_manager'
 # - :connect_with - callable for creating a connection
 # - :disconnect-_with - callable for shutting down a connection
 #
-class ConnectionPool
+class EzPool
   DEFAULTS = {size: 5, timeout: 1, max_age: Float::INFINITY}
 
   def self.wrap(options, &block)
@@ -65,13 +65,13 @@ class ConnectionPool
 
     if block_given?
       if options.include?(:connect_with)
-        raise ArgumentError.new("Block passed to ConnectionPool *and* :connect_with in options")
+        raise ArgumentError.new("Block passed to EzPool *and* :connect_with in options")
       else
         options[:connect_with] = block
       end
     end
 
-    @manager = ConnectionPool::ConnectionManager.new(options[:connect_with], options[:disconnect_with])
+    @manager = EzPool::ConnectionManager.new(options[:connect_with], options[:disconnect_with])
 
     @available = TimedStack.new(@manager, @size)
     @key = :"current-#{@available.object_id}"
@@ -136,7 +136,7 @@ end
       @checked_out_connections.delete(conn.object_id)
     end
     if conn_wrapper.nil?
-      raise ConnectionPool::CheckedInUnCheckedOutConnectionError
+      raise EzPool::CheckedInUnCheckedOutConnectionError
     end
     if expired? conn_wrapper
       @available.abandon(conn_wrapper)
@@ -148,7 +148,7 @@ end
 
   def shutdown
     if block_given?
-      raise ArgumentError.new("shutdown no longer accepts a block; call #disconnect_with to set the disconnect method, or pass the disconnect: option to the ConnectionPool initializer")
+      raise ArgumentError.new("shutdown no longer accepts a block; call #disconnect_with to set the disconnect method, or pass the disconnect: option to the EzPool initializer")
     end
     @available.shutdown
   end
@@ -166,7 +166,7 @@ end
     METHODS = [:with, :pool_shutdown]
 
     def initialize(options = {}, &block)
-      @pool = options.fetch(:pool) { ::ConnectionPool.new(options, &block) }
+      @pool = options.fetch(:pool) { ::EzPool.new(options, &block) }
     end
 
     def with(&block)

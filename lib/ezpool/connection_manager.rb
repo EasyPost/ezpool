@@ -2,7 +2,7 @@ require_relative 'connection_wrapper'
 require_relative 'errors'
 
 
-class ConnectionPool::ConnectionManager
+class EzPool::ConnectionManager
   def initialize(connect_with, disconnect_with = nil)
     @connect_with = connect_with
     @disconnect_with = disconnect_with
@@ -10,7 +10,7 @@ class ConnectionPool::ConnectionManager
 
   def connect
     if @connect_with.nil?
-      raise ConnectionPool::ConnectCallableNeverConfigured.new()
+      raise EzPool::ConnectCallableNeverConfigured.new()
     end
     @connect_with.call
   end
@@ -32,6 +32,6 @@ class ConnectionPool::ConnectionManager
   ##
   # Create a new wrapped connection
   def create_new
-    ConnectionPool::ConnectionWrapper.new(connect, self)
+    EzPool::ConnectionWrapper.new(connect, self)
   end
 end

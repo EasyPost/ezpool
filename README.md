@@ -1,6 +1,6 @@
 connection\_pool
 =================
-[![Build Status](https://travis-ci.org/mperham/connection_pool.svg)](https://travis-ci.org/mperham/connection_pool)
+[![Build Status](https://travis-ci.org/EasyPost/ezpool.svg)](https://travis-ci.org/EasyPost/ezpool)
 
 Generic connection pooling for Ruby. Originally forked from
 [connection_pool](https://github.com/mperham/connection_pool), but with moderately different semantics.
@@ -17,7 +17,7 @@ Create a pool of objects to share amongst the fibers or threads in your Ruby
 application:
 
 ```ruby
-$memcached = ConnectionPool.new(
+$memcached = EzPool.new(
   size: 5,
   timeout: 5,
   connect: proc { Dalli::Client.new }
@@ -27,13 +27,13 @@ $memcached = ConnectionPool.new(
 You can also pass your connection function as a block:
 
 ```ruby
-$memcached = ConnectionPool.new(size: 5, timeout: 5) { Dalli::Client.new }
+$memcached = EzPool.new(size: 5, timeout: 5) { Dalli::Client.new }
 ```
 
 Or you can configure it later:
 
 ```ruby
-$memcached = ConnectionPool.new(size: 5, timeout: 5)
+$memcached = EzPool.new(size: 5, timeout: 5)
 $memcached.connect_with { Dalli::Client.new }
 ```
 
@@ -61,7 +61,7 @@ This will only modify the resource-get timeout for this particular
 invocation. This is useful if you want to fail-fast on certain non critical
 sections when a resource is not available, or conversely if you are comfortable
 blocking longer on a particular resource. This is not implemented in the below
-`ConnectionPool::Wrapper` class.
+`EzPool::Wrapper` class.
 
 Note that you can also explicitly check-in/check-out connections using the `#checkin`
 and `#checkout` methods; however, there are no safety nets here! Once you check out a connection,
@@ -71,11 +71,11 @@ the connection goes out of scope and return it to the pool. Caveat emptor!
 
 ## Migrating to a Connection Pool
 
-You can use `ConnectionPool::Wrapper` to wrap a single global connection,
+You can use `EzPool::Wrapper` to wrap a single global connection,
 making it easier to migrate existing connection code over time:
 
 ``` ruby
-$redis = ConnectionPool::Wrapper.new(size: 5, timeout: 3) { Redis.connect }
+$redis = EzPool::Wrapper.new(size: 5, timeout: 3) { Redis.connect }
 $redis.sadd('foo', 1)
 $redis.smembers('foo')
 ```
@@ -97,11 +97,11 @@ the other end of the connection, there is no guarantee that two subsequent calls
 to a `Wrapper`-wrapped object will go to the same database.
 
 Once you've ported your entire system to use `with`, you can simply remove
-`Wrapper` and use the simpler and faster `ConnectionPool`.
+`Wrapper` and use the simpler and faster `EzPool`.
 
 ## Thread-safety / Connection Multiplexing
 
-`ConnectionPool`s are thread-safe and re-entrant in that the pool itself can be shared between different
+`EzPool`s are thread-safe and re-entrant in that the pool itself can be shared between different
 threads and it is guaranteed that the same connection will never be returned from overlapping calls
 to `#checkout` / `#with`. Note that this is achieved through the judicious use of mutexes; this code
 is not appropriate for systems with hard real-time requiremnts. Then again, neither is Ruby.
@@ -120,12 +120,12 @@ out and passing around connections.
 
 ## Shutdown
 
-You can shut down a ConnectionPool instance once it should no longer be used.
+You can shut down a EzPool instance once it should no longer be used.
 Further checkout attempts will immediately raise an error but existing checkouts
 will work.
 
 ```ruby
-cp = ConnectionPool.new(
+cp = EzPool.new(
     connect: lambda { Redis.new },
     disconnect: lambda { |conn| conn.quit }
 )

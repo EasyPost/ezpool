@@ -1,16 +1,16 @@
 require_relative 'helper'
 
-class TestConnectionPoolTimedStack < Minitest::Test
+class TestEzPoolTimedStack < Minitest::Test
 
   def setup
-    @manager = ConnectionPool::ConnectionManager.new(
+    @manager = EzPool::ConnectionManager.new(
       lambda { Object.new }
     )
-    @stack = ConnectionPool::TimedStack.new(@manager, 0)
+    @stack = EzPool::TimedStack.new(@manager, 0)
   end
 
   def test_empty_eh
-    stack = ConnectionPool::TimedStack.new(@manager, 1)
+    stack = EzPool::TimedStack.new(@manager, 1)
 
     refute_empty stack
 
@@ -24,7 +24,7 @@ class TestConnectionPoolTimedStack < Minitest::Test
   end
 
   def test_length
-    stack = ConnectionPool::TimedStack.new(@manager, 1)
+    stack = EzPool::TimedStack.new(@manager, 1)
 
     assert_equal 1, stack.length
 
@@ -41,7 +41,7 @@ class TestConnectionPoolTimedStack < Minitest::Test
     @manager.connect_with do
       raise 'failure'
     end
-    stack = ConnectionPool::TimedStack.new(@manager, 2)
+    stack = EzPool::TimedStack.new(@manager, 2)
 
     begin
       stack.pop
@@ -85,7 +85,7 @@ class TestConnectionPoolTimedStack < Minitest::Test
   end
 
   def test_pop_full
-    stack = ConnectionPool::TimedStack.new(@manager, 1)
+    stack = EzPool::TimedStack.new(@manager, 1)
 
     popped = stack.pop
 
@@ -110,13 +110,13 @@ class TestConnectionPoolTimedStack < Minitest::Test
   def test_pop_shutdown
     @stack.shutdown { }
 
-    assert_raises ConnectionPool::PoolShuttingDownError do
+    assert_raises EzPool::PoolShuttingDownError do
       @stack.pop
     end
   end
 
   def test_push
-    stack = ConnectionPool::TimedStack.new(@manager, 1)
+    stack = EzPool::TimedStack.new(@manager, 1)
 
     conn = stack.pop
 

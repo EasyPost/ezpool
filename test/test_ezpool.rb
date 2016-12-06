@@ -1,6 +1,6 @@
 require_relative 'helper'
 
-class TestConnectionPool < Minitest::Test
+class TestEzPool < Minitest::Test
 
   class NetworkConnection
     SLEEP_TIME = 0.1
@@ -61,7 +61,7 @@ class TestConnectionPool < Minitest::Test
 
   def test_basic_multithreaded_usage
     pool_size = 5
-    pool = ConnectionPool.new(size: pool_size) { NetworkConnection.new }
+    pool = EzPool.new(size: pool_size) { NetworkConnection.new }
 
     start = Time.new
 
@@ -83,7 +83,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_timeout
-    pool = ConnectionPool.new(timeout: 0, size: 1) { NetworkConnection.new }
+    pool = EzPool.new(timeout: 0, size: 1) { NetworkConnection.new }
     thread = Thread.new do
       pool.with do |net|
         net.do_something
@@ -105,7 +105,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_with
-    pool = ConnectionPool.new(
+    pool = EzPool.new(
       timeout: 0,
       size: 1,
       connect_with: lambda { Object.new }
@@ -121,7 +121,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_with_timeout
-    pool = ConnectionPool.new(
+    pool = EzPool.new(
       timeout: 0,
       size: 1,
       connect_with: lambda { Object.new }
@@ -141,7 +141,7 @@ class TestConnectionPool < Minitest::Test
   def test_checkout_ignores_timeout
     skip("Thread.handle_interrupt not available") unless Thread.respond_to?(:handle_interrupt)
 
-    pool = ConnectionPool.new(
+    pool = EzPool.new(
       timeout: 0,
       size: 1,
       connect_with: lambda { Object.new }
@@ -170,7 +170,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_explicit_return
-    pool = ConnectionPool.new(timeout: 0, size: 1)
+    pool = EzPool.new(timeout: 0, size: 1)
     pool.connect_with do
       mock = Minitest::Mock.new
       def mock.disconnect!
@@ -185,7 +185,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_with_timeout_override
-    pool = ConnectionPool.new(timeout: 0, size: 1) { NetworkConnection.new }
+    pool = EzPool.new(timeout: 0, size: 1) { NetworkConnection.new }
 
     t = Thread.new do
       pool.with do |net|
@@ -206,7 +206,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_checkin
-    pool = ConnectionPool.new(timeout: 0, size: 1) { NetworkConnection.new }
+    pool = EzPool.new(timeout: 0, size: 1) { NetworkConnection.new }
     conn = pool.checkout
 
     assert_raises Timeout::Error do
@@ -219,20 +219,20 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_returns_value
-    pool = ConnectionPool.new(timeout: 0, size: 1) { Object.new }
+    pool = EzPool.new(timeout: 0, size: 1) { Object.new }
     assert_equal 1, pool.with {|o| 1 }
   end
 
   def test_checkin_garbage
-    pool = ConnectionPool.new(timeout: 0, size: 1) { Object.new }
+    pool = EzPool.new(timeout: 0, size: 1) { Object.new }
 
-     assert_raises ConnectionPool::CheckedInUnCheckedOutConnectionError do
+     assert_raises EzPool::CheckedInUnCheckedOutConnectionError do
       pool.checkin Object.new
     end
   end
 
   def test_checkout
-    pool = ConnectionPool.new(size: 2) { NetworkConnection.new }
+    pool = EzPool.new(size: 2) { NetworkConnection.new }
 
     conn = pool.checkout
 
@@ -242,7 +242,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_checkout_multithread
-    pool = ConnectionPool.new(size: 2) { NetworkConnection.new }
+    pool = EzPool.new(size: 2) { NetworkConnection.new }
     conn = pool.checkout
 
     t = Thread.new do
@@ -253,7 +253,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_checkout_timeout
-    pool = ConnectionPool.new(timeout: 0, size: 0) { Object.new }
+    pool = EzPool.new(timeout: 0, size: 0) { Object.new }
 
     assert_raises Timeout::Error do
       pool.checkout
@@ -261,7 +261,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_checkout_timeout_override
-    pool = ConnectionPool.new(timeout: 0, size: 1) { NetworkConnection.new }
+    pool = EzPool.new(timeout: 0, size: 1) { NetworkConnection.new }
 
     thread = Thread.new do
       pool.with do |net|
@@ -280,7 +280,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_passthru
-    pool = ConnectionPool.wrap(timeout: 2 * NetworkConnection::SLEEP_TIME, size: 1) { NetworkConnection.new }
+    pool = EzPool.wrap(timeout: 2 * NetworkConnection::SLEEP_TIME, size: 1) { NetworkConnection.new }
     assert_equal 1, pool.do_something
     assert_equal 2, pool.do_something
     assert_equal 5, pool.do_something_with_block { 3 }
@@ -288,7 +288,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_passthru_respond_to
-    pool = ConnectionPool.wrap(timeout: 2 * NetworkConnection::SLEEP_TIME, size: 1) { NetworkConnection.new }
+    pool = EzPool.wrap(timeout: 2 * NetworkConnection::SLEEP_TIME, size: 1) { NetworkConnection.new }
     assert pool.respond_to?(:with)
     assert pool.respond_to?(:do_something)
     assert pool.respond_to?(:do_magic)
@@ -296,7 +296,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_return_value
-    pool = ConnectionPool.new(timeout: 2 * NetworkConnection::SLEEP_TIME, size: 1) { NetworkConnection.new }
+    pool = EzPool.new(timeout: 2 * NetworkConnection::SLEEP_TIME, size: 1) { NetworkConnection.new }
     result = pool.with do |net|
       net.fast
     end
@@ -304,7 +304,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_heavy_threading
-    pool = ConnectionPool.new(timeout: 0.5, size: 3) { NetworkConnection.new }
+    pool = EzPool.new(timeout: 0.5, size: 3) { NetworkConnection.new }
 
     threads = Array.new(20) do
       Thread.new do
@@ -318,7 +318,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_reuses_objects_when_pool_not_saturated
-    pool = ConnectionPool.new(size: 5) { NetworkConnection.new }
+    pool = EzPool.new(size: 5) { NetworkConnection.new }
 
     ids = 10.times.map do
       pool.with { |c| c.object_id }
@@ -329,7 +329,7 @@ class TestConnectionPool < Minitest::Test
 
   def test_nested_checkout_fails
     recorder = Recorder.new
-    pool = ConnectionPool.new(size: 1) { recorder }
+    pool = EzPool.new(size: 1) { recorder }
     pool.with do |r_outer|
       @other = Thread.new do |t|
         pool.with do |r_other|
@@ -350,7 +350,7 @@ class TestConnectionPool < Minitest::Test
   def test_shutdown_is_executed_for_all_connections
     recorders = []
 
-    pool = ConnectionPool.new(size: 3) do
+    pool = EzPool.new(size: 3) do
       Recorder.new.tap { |r| recorders << r }
     end
 
@@ -367,9 +367,9 @@ class TestConnectionPool < Minitest::Test
     assert_equal [["shutdown"]] * 3, recorders.map { |r| r.calls }
   end
 
-  def test_shutdown_works_as_argument_to_connection_pool
+  def test_shutdown_works_as_argument_to_ezpool
     recorders = []
-    pool = ConnectionPool.new(
+    pool = EzPool.new(
       size: 3,
       connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
       disconnect_with: lambda { |recorder| recorder.do_work("shutdown")}
@@ -385,11 +385,11 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_raises_error_after_shutting_down
-    pool = ConnectionPool.new(size: 1) { true }
+    pool = EzPool.new(size: 1) { true }
 
     pool.shutdown
 
-    assert_raises ConnectionPool::PoolShuttingDownError do
+    assert_raises EzPool::PoolShuttingDownError do
       pool.checkout
     end
   end
@@ -397,7 +397,7 @@ class TestConnectionPool < Minitest::Test
   def test_runs_shutdown_block_asynchronously_if_connection_was_in_use
     recorders = []
 
-    pool = ConnectionPool.new(
+    pool = EzPool.new(
       size: 3,
       connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
       disconnect_with: lambda { |recorder| recorder.do_work("shutdown") }
@@ -421,7 +421,7 @@ class TestConnectionPool < Minitest::Test
   def test_max_age
     recorders = []
 
-    pool = ConnectionPool.new(
+    pool = EzPool.new(
       size: 3, max_age: 0.1,
       connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
       disconnect_with: lambda { |conn| conn.do_work("shutdown") }
@@ -441,7 +441,7 @@ class TestConnectionPool < Minitest::Test
   def test_connect_with
     conn_cls = Struct.new("Conn")
 
-    pool = ConnectionPool.new(size: 1, connect_with: proc { conn_cls.new })
+    pool = EzPool.new(size: 1, connect_with: proc { conn_cls.new })
     
     pool.with do |conn|
       assert_instance_of(conn_cls, conn)
@@ -451,7 +451,7 @@ class TestConnectionPool < Minitest::Test
   def test_shutdown_is_executed_for_all_connections_in_wrapped_pool
     recorders = []
 
-    wrapper = ConnectionPool::Wrapper.new(
+    wrapper = EzPool::Wrapper.new(
       size: 3,
       connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
       disconnect_with: lambda { |recorder| recorder.do_work("shutdown") }
@@ -467,12 +467,12 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_wrapper_method_missing
-    wrapper = ConnectionPool::Wrapper.new { NetworkConnection.new }
+    wrapper = EzPool::Wrapper.new { NetworkConnection.new }
     assert_equal 1, wrapper.fast
   end
 
   def test_wrapper_respond_to_eh
-    wrapper = ConnectionPool::Wrapper.new { NetworkConnection.new }
+    wrapper = EzPool::Wrapper.new { NetworkConnection.new }
 
     assert_respond_to wrapper, :with
 
@@ -481,7 +481,7 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_wrapper_with
-    wrapper = ConnectionPool::Wrapper.new(timeout: 0, size: 1) { Object.new }
+    wrapper = EzPool::Wrapper.new(timeout: 0, size: 1) { Object.new }
 
     wrapper.with do
       assert_raises Timeout::Error do
@@ -501,15 +501,15 @@ class TestConnectionPool < Minitest::Test
   end
 
   def test_wrapper_kernel_methods
-    wrapper = ConnectionPool::Wrapper.new(timeout: 0, size: 1) { ConnWithEval.new }
+    wrapper = EzPool::Wrapper.new(timeout: 0, size: 1) { ConnWithEval.new }
 
     assert_equal "eval'ed 1", wrapper.eval(1)
   end
 
-  def test_wrapper_with_connection_pool
+  def test_wrapper_with_ezpool
     recorder = Recorder.new
-    pool = ConnectionPool.new(size: 1) { recorder }
-    wrapper = ConnectionPool::Wrapper.new(pool: pool)
+    pool = EzPool.new(size: 1) { recorder }
+    wrapper = EzPool::Wrapper.new(pool: pool)
 
     pool.with { |r| r.do_work('with') }
     wrapper.do_work('wrapped')

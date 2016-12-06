@@ -1,11 +1,11 @@
 require_relative 'monotonic_time'
 
-class ConnectionPool::ConnectionWrapper
+class EzPool::ConnectionWrapper
   attr_reader :raw_conn
 
   def initialize(conn, connection_manager)
     @raw_conn = conn
-    @created_at = ConnectionPool.monotonic_time
+    @created_at = EzPool.monotonic_time
     @manager = connection_manager
   end
 
@@ -15,6 +15,6 @@ class ConnectionPool::ConnectionWrapper
   end
 
   def age
-    ConnectionPool.monotonic_time - @created_at
+    EzPool.monotonic_time - @created_at
   end
 end

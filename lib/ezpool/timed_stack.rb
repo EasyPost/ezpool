@@ -6,7 +6,7 @@ require_relative 'monotonic_time'
 # Raised when you attempt to retrieve a connection from a pool that has been
 # shut down.
 
-class ConnectionPool::PoolShuttingDownError < RuntimeError; end
+class EzPool::PoolShuttingDownError < RuntimeError; end
 
 
 ##
@@ -28,7 +28,7 @@ class ConnectionPool::PoolShuttingDownError < RuntimeError; end
 #    ts.pop timeout: 5
 #    #=> raises Timeout::Error after 5 seconds
 
-class ConnectionPool::TimedStack
+class EzPool::TimedStack
 
   ##
   # Creates a new pool with +size+ connections that are created by
@@ -74,16 +74,16 @@ class ConnectionPool::TimedStack
     options, timeout = timeout, 0.5 if Hash === timeout
     timeout = options.fetch :timeout, timeout
 
-    deadline = ConnectionPool.monotonic_time + timeout
+    deadline = EzPool.monotonic_time + timeout
     @mutex.synchronize do
       loop do
-        raise ConnectionPool::PoolShuttingDownError if @shutting_down
+        raise EzPool::PoolShuttingDownError if @shutting_down
         return fetch_connection(options) if connection_stored?(options)
 
         connection = try_create(options)
         return connection if connection
 
-        to_wait = deadline - ConnectionPool.monotonic_time
+        to_wait = deadline - EzPool.monotonic_time
         raise Timeout::Error, "Waited #{timeout} sec" if to_wait <= 0
         @resource.wait(@mutex, to_wait)
       end
@@ -103,7 +103,7 @@ class ConnectionPool::TimedStack
 
   ##
   # Shuts down the TimedStack which prevents connections from being checked
-  # out. Calls the shutdown program specified in the ConnectionPool
+  # out. Calls the shutdown program specified in the EzPool
   # initializer
 
   def shutdown()
