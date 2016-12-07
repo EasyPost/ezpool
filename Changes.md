@@ -1,5 +1,19 @@
+ezpool ChangeLog
+================
+
+1.0.0
+-----
+- Initial release of fork under the new name `ezpool` 
+- connect / disconnect methods are now arguments to the `EzPool` constructor
+- Adds a new `max_age` parameter to gracefully recycle connections
+- Removes re-entrant/recursive connection handling
+
+
+Previous versions (pre-fork):
+
+
 connection\_pool changelog
----------------------------
+===========================
 
 2.2.1
 ------

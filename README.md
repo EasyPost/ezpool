@@ -1,6 +1,6 @@
-connection\_pool
+ezpool
 =================
-[![Build Status](https://travis-ci.org/EasyPost/ezpool.svg)](https://travis-ci.org/EasyPost/ezpool)
+[![Build Status](https://travis-ci.org/EasyPost/ezpool.svg?branch=master)](https://travis-ci.org/EasyPost/ezpool)
 
 Generic connection pooling for Ruby. Originally forked from
 [connection_pool](https://github.com/mperham/connection_pool), but with moderately different semantics.
