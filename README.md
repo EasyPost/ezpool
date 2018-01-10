@@ -20,7 +20,7 @@ application:
 $memcached = EzPool.new(
   size: 5,
   timeout: 5,
-  connect: proc { Dalli::Client.new }
+  connect_with: proc { Dalli::Client.new }
 )
 ```
 
@@ -126,8 +126,8 @@ will work.
 
 ```ruby
 cp = EzPool.new(
-    connect: lambda { Redis.new },
-    disconnect: lambda { |conn| conn.quit }
+    connect_with: lambda { Redis.new },
+    disconnect_with: lambda { |conn| conn.quit }
 )
 cp.shutdown
 ```
