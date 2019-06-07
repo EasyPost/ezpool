@@ -43,7 +43,7 @@ require_relative 'ezpool/connection_manager'
 # - :disconnect-_with - callable for shutting down a connection
 #
 class EzPool
-  DEFAULTS = {size: 5, timeout: 1, max_age: Float::INFINITY}
+  DEFAULTS = {size: 5, timeout: 1, max_age: Float::INFINITY, max_idle_time: Float::INFINITY}
 
   def self.wrap(options, &block)
     if block_given?
@@ -58,9 +58,14 @@ class EzPool
     @size = options.fetch(:size)
     @timeout = options.fetch(:timeout)
     @max_age = options.fetch(:max_age).to_f
+    @max_idle_time = options.fetch(:max_idle_time).to_f
 
     if @max_age <= 0
       raise ArgumentError.new(":max_age must be > 0")
+    end
+
+    if @max_idle_time <= 0
+      raise ArgumentError.new(":max_idle_time must be > 0")
     end
 
     if block_given?
@@ -119,7 +124,7 @@ end
     while conn_wrapper.nil? do
       timeout = options[:timeout] || @timeout
       conn_wrapper = @available.pop(timeout: timeout)
-      if expired? conn_wrapper
+      if expired?(conn_wrapper)
         @available.abandon(conn_wrapper)
         conn_wrapper = nil
       end
@@ -128,6 +133,7 @@ end
     @mutex.synchronize do
       @checked_out_connections[conn_wrapper.raw_conn.object_id] = conn_wrapper
     end
+    conn_wrapper.touch_connection
     conn_wrapper.raw_conn
   end
 
@@ -138,7 +144,7 @@ end
     if conn_wrapper.nil?
       raise EzPool::CheckedInUnCheckedOutConnectionError
     end
-    if expired? conn_wrapper
+    if expired?(conn_wrapper)
       @available.abandon(conn_wrapper)
     else
       @available.push(conn_wrapper)
@@ -155,11 +161,8 @@ end
 
   private
   def expired?(connection_wrapper)
-    if @max_age.finite?
-      connection_wrapper.age > @max_age
-    else
-      false
-    end
+    @max_age.finite? && connection_wrapper.age > @max_age ||
+      @max_idle_time.finite? && connection_wrapper.idle_time > @max_idle_time
   end
 
   class Wrapper < ::BasicObject

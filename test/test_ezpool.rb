@@ -438,6 +438,37 @@ class TestEzPool < Minitest::Test
     assert_equal [["shutdown"], ["shutdown"]], recorders.map { |r| r.calls }
   end
 
+  def test_max_idle_connection
+    recorders = []
+
+    pool = EzPool.new(
+      size: 3, max_idle_time: 0.1,
+      connect_with: lambda { Recorder.new.tap { |r| recorders << r } },
+      disconnect_with: lambda { |conn| conn.do_work("shutdown") }
+    )
+
+    pool.with do |conn|
+      sleep(0.09)
+    end
+
+    pool.with do |conn|
+      sleep(0.09)
+    end
+
+    assert_equal [[]], recorders.map { |r| r.calls }
+
+    pool.with do |conn|
+      sleep(0.11)
+    end
+
+    pool.with do |conn|
+      sleep(0.11)
+    end
+
+    assert_equal [["shutdown"], ["shutdown"]], recorders.map { |r| r.calls }
+  end
+
+
   def test_connect_with
     conn_cls = Struct.new("Conn")
 
