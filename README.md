@@ -17,10 +17,13 @@ Create a pool of objects to share amongst the fibers or threads in your Ruby
 application:
 
 ```ruby
-$memcached = EzPool.new(
+$pool = EzPool.new(
   size: 5,
   timeout: 5,
-  connect_with: proc { Dalli::Client.new }
+  max_age: 300, # number of seconds since creation connection can be reassigned  
+  connect_with: lambda { /* return new connection */ },
+  disconnect_with: lambda { |conn| /* call disconnect on conn */ },
+  prove_with: lambda { /* true if connection is valid */ }
 )
 ```
 
@@ -162,4 +165,4 @@ Author
 
 Originally by Mike Perham, [@mperham](https://twitter.com/mperham), <http://mikeperham.com>
 
-Forked and modified by engineers at [EasyPost](https://www.easypost.com).
+Forked from [EasyPost](https://www.easypost.com), modified by engineers at [Folloze](https://www.folloze.com/).
