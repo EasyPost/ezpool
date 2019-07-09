@@ -23,7 +23,7 @@ $pool = EzPool.new(
   max_age: 300, # number of seconds since creation connection can be reassigned  
   connect_with: lambda { /* return new connection */ },
   disconnect_with: lambda { |conn| /* call disconnect on conn */ },
-  prove_with: lambda { /* true if connection is valid */ }
+  prove_with: lambda { /* |conn| true if connection is valid */ }
 )
 ```
 
