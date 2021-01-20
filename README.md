@@ -1,6 +1,7 @@
 ezpool
 =================
-[![Build Status](https://travis-ci.com/EasyPost/ezpool.svg?branch=master)](https://travis-ci.com/EasyPost/ezpool)
+
+[![CI](https://github.com/EasyPost/ezpool/workflows/CI/badge.svg)](https://github.com/EasyPost/ezpool/actions?query=workflow%3ACI)
 
 Generic connection pooling for Ruby. Originally forked from
 [connection_pool](https://github.com/mperham/connection_pool), but with moderately different semantics.
