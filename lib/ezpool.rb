@@ -71,7 +71,7 @@ class EzPool
       end
     end
 
-    @manager = EzPool::ConnectionManager.new(options[:connect_with], options[:disconnect_with])
+    @manager = EzPool::ConnectionManager.new(options[:connect_with], options[:disconnect_with], options[:prove_with])
 
     @available = TimedStack.new(@manager, @size)
     @key = :"current-#{@available.object_id}"
@@ -86,6 +86,10 @@ class EzPool
 
   def disconnect_with(&block)
     @manager.disconnect_with(&block)
+  end
+  
+  def prove_with(&block)
+    @manager.prove_with(&block)
   end
 
 if Thread.respond_to?(:handle_interrupt)
@@ -119,7 +123,7 @@ end
     while conn_wrapper.nil? do
       timeout = options[:timeout] || @timeout
       conn_wrapper = @available.pop(timeout: timeout)
-      if expired? conn_wrapper
+      if expired? conn_wrapper or invalid? conn_wrapper
         @available.abandon(conn_wrapper)
         conn_wrapper = nil
       end
@@ -138,7 +142,7 @@ end
     if conn_wrapper.nil?
       raise EzPool::CheckedInUnCheckedOutConnectionError
     end
-    if expired? conn_wrapper
+    if expired? conn_wrapper or invalid? conn_wrapper
       @available.abandon(conn_wrapper)
     else
       @available.push(conn_wrapper)
@@ -160,6 +164,10 @@ end
     else
       false
     end
+  end
+  
+  def invalid?(connection_wrapper)
+    connection_wrapper.invalid?
   end
 
   class Wrapper < ::BasicObject

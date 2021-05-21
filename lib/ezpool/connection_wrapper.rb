@@ -13,6 +13,13 @@ class EzPool::ConnectionWrapper
   def shutdown!
     @manager.disconnect(@raw_conn)
   end
+  
+  def invalid?
+    valid = @manager.prove(@raw_conn)
+    
+    res = true
+    res = false unless (valid.nil? or !valid)
+  end
 
   def age
     EzPool.monotonic_time - @created_at
