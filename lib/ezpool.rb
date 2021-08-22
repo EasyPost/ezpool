@@ -3,6 +3,8 @@ require_relative 'ezpool/timed_stack'
 require_relative 'ezpool/errors'
 require_relative 'ezpool/connection_manager'
 
+require 'set'
+
 
 # Generic connection pool class for e.g. sharing a limited number of network connections
 # among many threads.  Note: Connections are lazily created.
