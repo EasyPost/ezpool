@@ -76,7 +76,7 @@ class EzPool
     @available = TimedStack.new(@manager, @size)
     @key = :"current-#{@available.object_id}"
 
-    @checked_out_connections = Hash.new
+    @checked_out_connections = Set.new
     @mutex = Mutex.new
   end
 
@@ -125,11 +125,17 @@ end
       end
     end
 
+    @mutex.synchronize do
+      @checked_out_connections.add(conn_wrapper)
+    end
     conn_wrapper
   end
 
   def checkin(conn_wrapper)
-    if conn_wrapper.nil?
+    known = @mutex.synchronize do
+      @checked_out_connections.delete?(conn_wrapper)
+    end
+    if known.nil?
       raise EzPool::CheckedInUnCheckedOutConnectionError
     end
     if expired? conn_wrapper

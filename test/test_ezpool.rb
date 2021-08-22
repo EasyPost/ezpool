@@ -3,6 +3,9 @@
 require_relative 'helper'
 
 class TestEzPool < Minitest::Test
+  TestPool = Class.new(EzPool) do
+    attr_reader :available
+  end
 
   class NetworkConnection
     SLEEP_TIME = 0.1
@@ -225,11 +228,19 @@ class TestEzPool < Minitest::Test
     assert_equal 1, pool.with { |_o| 1 }
   end
 
-  def test_checkin_garbage
+  def test_checkin_nil
     pool = EzPool.new(timeout: 0, size: 1) { Object.new }
 
     assert_raises EzPool::CheckedInUnCheckedOutConnectionError do
       pool.checkin nil
+    end
+  end
+
+  def test_checkin_garbage
+    pool = EzPool.new(timeout: 0, size: 1) { Object.new }
+
+    assert_raises EzPool::CheckedInUnCheckedOutConnectionError do
+      pool.checkin Object.new
     end
   end
 
