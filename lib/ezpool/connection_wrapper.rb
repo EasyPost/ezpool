@@ -1,13 +1,21 @@
-require_relative 'monotonic_time'
+# frozen_string_literal: true
 
-class EzPool::ConnectionWrapper
+require_relative 'monotonic_time'
+require 'delegate'
+
+class EzPool::ConnectionWrapper < SimpleDelegator
   attr_reader :raw_conn
+  attr_reader :expired
+
+  alias expired? expired
 
   def initialize(conn, connection_manager)
-    @raw_conn = conn
     @created_at = EzPool.monotonic_time
     @manager = connection_manager
     @expired = false
+    @raw_conn = conn
+
+    super(conn)
   end
 
   # Shut down the connection. Can no longer be used after this!
@@ -20,6 +28,6 @@ class EzPool::ConnectionWrapper
   end
 
   def age
-    EzPool.monotonic_time - @created_at || @expired == true
+    EzPool.monotonic_time - @created_at
   end
 end

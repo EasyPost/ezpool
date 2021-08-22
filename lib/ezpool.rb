@@ -40,7 +40,7 @@ require_relative 'ezpool/connection_manager'
 # - :timeout - amount of time to wait for a connection if none currently available, defaults to 5 seconds
 # - :max_age - maximum number of seconds that a connection may be alive for (will recycle on checkin/checkout)
 # - :connect_with - callable for creating a connection
-# - :disconnect-_with - callable for shutting down a connection
+# - :disconnect_with - callable for shutting down a connection
 #
 class EzPool
   DEFAULTS = {size: 5, timeout: 1, max_age: Float::INFINITY}
@@ -125,16 +125,10 @@ end
       end
     end
 
-    @mutex.synchronize do
-      @checked_out_connections[conn_wrapper.raw_conn.object_id] = conn_wrapper
-    end
-    conn_wrapper.raw_conn
+    conn_wrapper
   end
 
-  def checkin(conn)
-    conn_wrapper = @mutex.synchronize do
-      @checked_out_connections.delete(conn.object_id)
-    end
+  def checkin(conn_wrapper)
     if conn_wrapper.nil?
       raise EzPool::CheckedInUnCheckedOutConnectionError
     end
@@ -155,6 +149,8 @@ end
 
   private
   def expired?(connection_wrapper)
+    return true if connection_wrapper.expired?
+
     if @max_age.finite?
       connection_wrapper.age > @max_age
     else
