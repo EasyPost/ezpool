@@ -7,6 +7,7 @@ class EzPool::ConnectionWrapper
     @raw_conn = conn
     @created_at = EzPool.monotonic_time
     @manager = connection_manager
+    @expired = false
   end
 
   # Shut down the connection. Can no longer be used after this!
@@ -14,7 +15,11 @@ class EzPool::ConnectionWrapper
     @manager.disconnect(@raw_conn)
   end
 
+  def expire!
+    @expired = true
+  end
+
   def age
-    EzPool.monotonic_time - @created_at
+    EzPool.monotonic_time - @created_at || @expired == true
   end
 end
