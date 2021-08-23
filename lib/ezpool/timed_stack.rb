@@ -29,7 +29,6 @@ class EzPool::PoolShuttingDownError < RuntimeError; end
 #    #=> raises Timeout::Error after 5 seconds
 
 class EzPool::TimedStack
-
   ##
   # Creates a new pool with +size+ connections that are created by
   # constructing the given +connection_wrapper+ class
