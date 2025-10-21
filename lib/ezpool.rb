@@ -3,6 +3,8 @@ require_relative 'ezpool/timed_stack'
 require_relative 'ezpool/errors'
 require_relative 'ezpool/connection_manager'
 
+require 'set'
+
 
 # Generic connection pool class for e.g. sharing a limited number of network connections
 # among many threads.  Note: Connections are lazily created.
@@ -40,7 +42,7 @@ require_relative 'ezpool/connection_manager'
 # - :timeout - amount of time to wait for a connection if none currently available, defaults to 5 seconds
 # - :max_age - maximum number of seconds that a connection may be alive for (will recycle on checkin/checkout)
 # - :connect_with - callable for creating a connection
-# - :disconnect-_with - callable for shutting down a connection
+# - :disconnect_with - callable for shutting down a connection
 #
 class EzPool
   DEFAULTS = {size: 5, timeout: 1, max_age: Float::INFINITY}
@@ -76,7 +78,7 @@ class EzPool
     @available = TimedStack.new(@manager, @size)
     @key = :"current-#{@available.object_id}"
 
-    @checked_out_connections = Hash.new
+    @checked_out_connections = Set.new
     @mutex = Mutex.new
   end
 
@@ -126,16 +128,16 @@ end
     end
 
     @mutex.synchronize do
-      @checked_out_connections[conn_wrapper.raw_conn.object_id] = conn_wrapper
+      @checked_out_connections.add(conn_wrapper)
     end
-    conn_wrapper.raw_conn
+    conn_wrapper
   end
 
-  def checkin(conn)
-    conn_wrapper = @mutex.synchronize do
-      @checked_out_connections.delete(conn.object_id)
+  def checkin(conn_wrapper)
+    known = @mutex.synchronize do
+      @checked_out_connections.delete?(conn_wrapper)
     end
-    if conn_wrapper.nil?
+    if known.nil?
       raise EzPool::CheckedInUnCheckedOutConnectionError
     end
     if expired? conn_wrapper
@@ -155,6 +157,8 @@ end
 
   private
   def expired?(connection_wrapper)
+    return true if connection_wrapper.expired?
+
     if @max_age.finite?
       connection_wrapper.age > @max_age
     else

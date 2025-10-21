@@ -1,6 +1,11 @@
+# frozen_string_literal: true
+
 require_relative 'helper'
 
 class TestEzPool < Minitest::Test
+  TestPool = Class.new(EzPool) do
+    attr_reader :available
+  end
 
   class NetworkConnection
     SLEEP_TIME = 0.1
@@ -220,13 +225,21 @@ class TestEzPool < Minitest::Test
 
   def test_returns_value
     pool = EzPool.new(timeout: 0, size: 1) { Object.new }
-    assert_equal 1, pool.with {|o| 1 }
+    assert_equal 1, pool.with { |_o| 1 }
+  end
+
+  def test_checkin_nil
+    pool = EzPool.new(timeout: 0, size: 1) { Object.new }
+
+    assert_raises EzPool::CheckedInUnCheckedOutConnectionError do
+      pool.checkin nil
+    end
   end
 
   def test_checkin_garbage
     pool = EzPool.new(timeout: 0, size: 1) { Object.new }
 
-     assert_raises EzPool::CheckedInUnCheckedOutConnectionError do
+    assert_raises EzPool::CheckedInUnCheckedOutConnectionError do
       pool.checkin Object.new
     end
   end
@@ -236,7 +249,8 @@ class TestEzPool < Minitest::Test
 
     conn = pool.checkout
 
-    assert_kind_of NetworkConnection, conn
+    assert_kind_of EzPool::ConnectionWrapper, conn
+    assert_kind_of NetworkConnection, conn.raw_conn
 
     refute_same conn, pool.checkout
   end
@@ -444,7 +458,8 @@ class TestEzPool < Minitest::Test
     pool = EzPool.new(size: 1, connect_with: proc { conn_cls.new })
     
     pool.with do |conn|
-      assert_instance_of(conn_cls, conn)
+      assert_instance_of(EzPool::ConnectionWrapper, conn)
+      assert_instance_of(conn_cls, conn.raw_conn)
     end
   end
 
@@ -514,6 +529,20 @@ class TestEzPool < Minitest::Test
     pool.with { |r| r.do_work('with') }
     wrapper.do_work('wrapped')
 
-    assert_equal ['with', 'wrapped'], recorder.calls
+    assert_equal %w[with wrapped], recorder.calls
+  end
+
+  def test_ezpool_wrapper_manual_expiration
+    recorder = Recorder.new
+    pool = TestPool.new(size: 1) { recorder }
+
+    pool.with do |r|
+      r.do_work(r.object_id)
+      r.expire!
+    end
+
+    pool.with { |r| r.do_work(r.object_id) }
+
+    refute_equal(*recorder.calls)
   end
 end
